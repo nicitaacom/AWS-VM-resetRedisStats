@@ -8,6 +8,7 @@ const vm2_1 = __importDefault(require("vm2"));
 const { VM } = vm2_1.default;
 const ioredis_1 = require("ioredis");
 const resend_1 = require("resend");
+const crypto_1 = __importDefault(require("crypto"));
 const handler = async (event) => {
     if (!process.env.NEXT_PUBLIC_PRODUCTION_URL || !process.env.NEXT_PUBLIC_PRODUCTION_AUTH_URL) {
         return {
@@ -28,7 +29,9 @@ const handler = async (event) => {
         throw new Error(`Error ${response.status}: ${errorMessage || "Unknown error"}`);
     }
     const responseData = await response.json();
-    const imports = { Redis: ioredis_1.Redis, Resend: resend_1.Resend };
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+    const imports = { Redis: ioredis_1.Redis, Resend: resend_1.Resend, crypto: crypto_1.default, encoder, decoder };
     const vm = new VM({
         timeout: 25000,
         sandbox: {
@@ -47,7 +50,7 @@ const handler = async (event) => {
             .replace("export const handler = async (event) => {", '') // Remove handler definition line
             .replace("};", ''); // Remove only the last closing `};`
         const wrappedCode = `  
-    const { Redis, Resend } = imports;
+    const { Redis, Resend, crypto, encoder, decoder } = imports;
 
     (async () => {
       try {
