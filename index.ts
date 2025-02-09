@@ -3,7 +3,7 @@ const { VM } = VMModule;
 
 
 import { Redis } from "ioredis";
-
+import { Resend } from 'resend' 
 
 
 
@@ -22,9 +22,7 @@ export const handler = async (event: Event) => {
 
 
 
-  const imports = {
-    Redis,
-}
+
 
 
 
@@ -51,7 +49,8 @@ if (!response.ok) {
 
 const responseData = await response.json();
 
-
+  const imports = {Redis,Resend}
+  
 const vm = new VM({
   timeout: 25000, // 25 seconds to prevent Lambda timeout
   sandbox: {
@@ -76,7 +75,7 @@ try {
 
 
   const wrappedCode = `  
-    const { Redis } = imports;
+    const { Redis, Resend } = imports;
 
     (async () => {
       try {

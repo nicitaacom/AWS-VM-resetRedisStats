@@ -7,6 +7,7 @@ exports.handler = void 0;
 const vm2_1 = __importDefault(require("vm2"));
 const { VM } = vm2_1.default;
 const ioredis_1 = require("ioredis");
+const resend_1 = require("resend");
 const handler = async (event) => {
     if (!process.env.NEXT_PUBLIC_PRODUCTION_URL || !process.env.NEXT_PUBLIC_PRODUCTION_AUTH_URL) {
         return {
@@ -14,9 +15,6 @@ const handler = async (event) => {
             error: 'NEXT_PUBLIC_PRODUCTION_URL or NEXT_PUBLIC_PRODUCTION_AUTH_URL missing',
         };
     }
-    const imports = {
-        Redis: ioredis_1.Redis,
-    };
     const response = await fetch(`${process.env.NEXT_PUBLIC_PRODUCTION_AUTH_URL}api/lambda/VM-resetRedisStatsToday`, {
         method: "POST",
         headers: {
@@ -30,6 +28,7 @@ const handler = async (event) => {
         throw new Error(`Error ${response.status}: ${errorMessage || "Unknown error"}`);
     }
     const responseData = await response.json();
+    const imports = { Redis: ioredis_1.Redis, Resend: resend_1.Resend };
     const vm = new VM({
         timeout: 25000,
         sandbox: {
@@ -48,7 +47,7 @@ const handler = async (event) => {
             .replace("export const handler = async (event) => {", '') // Remove handler definition line
             .replace("};", ''); // Remove only the last closing `};`
         const wrappedCode = `  
-    const { Redis } = imports;
+    const { Redis, Resend } = imports;
 
     (async () => {
       try {
