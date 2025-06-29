@@ -16,7 +16,7 @@ const handler = async (event) => {
             error: 'NEXT_PUBLIC_PRODUCTION_URL or NEXT_PUBLIC_PRODUCTION_AUTH_URL missing',
         };
     }
-    const response = await fetch(`${process.env.NEXT_PUBLIC_PRODUCTION_AUTH_URL}api/lambda/VM-resetRedisStatsToday`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_PRODUCTION_AUTH_URL}api/lambda/VM-resetRedisStats`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",

@@ -34,7 +34,7 @@ export const handler = async (event: Event) => {
 
 
 
-const response = await fetch(`${process.env.NEXT_PUBLIC_PRODUCTION_AUTH_URL}api/lambda/VM-resetRedisStatsToday`, {
+const response = await fetch(`${process.env.NEXT_PUBLIC_PRODUCTION_AUTH_URL}api/lambda/VM-resetRedisStats`, {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
