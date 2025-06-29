@@ -5,7 +5,7 @@ const { VM } = VMModule;
 import { Redis } from "ioredis";
 import { Resend } from 'resend' 
 import crypto from 'crypto'
-
+import moment from "moment-timezone"
 
 
 
@@ -53,7 +53,7 @@ const responseData = await response.json();
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()
 
-  const imports = {Redis,Resend,crypto,encoder,decoder}
+  const imports = {Redis,Resend,crypto,encoder,decoder,moment}
   
 const vm = new VM({
   timeout: 25000, // 25 seconds to prevent Lambda timeout
@@ -79,7 +79,7 @@ try {
 
 
   const wrappedCode = `  
-    const { Redis, Resend, crypto, encoder, decoder } = imports;
+    const { Redis, Resend, crypto, encoder, decoder, moment } = imports;
 
     (async () => {
       try {
