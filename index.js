@@ -9,6 +9,7 @@ const { VM } = vm2_1.default;
 const ioredis_1 = require("ioredis");
 const resend_1 = require("resend");
 const crypto_1 = __importDefault(require("crypto"));
+const moment_timezone_1 = __importDefault(require("moment-timezone"));
 const handler = async (event) => {
     if (!process.env.NEXT_PUBLIC_PRODUCTION_URL || !process.env.NEXT_PUBLIC_PRODUCTION_AUTH_URL) {
         return {
@@ -31,7 +32,7 @@ const handler = async (event) => {
     const responseData = await response.json();
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
-    const imports = { Redis: ioredis_1.Redis, Resend: resend_1.Resend, crypto: crypto_1.default, encoder, decoder };
+    const imports = { Redis: ioredis_1.Redis, Resend: resend_1.Resend, crypto: crypto_1.default, encoder, decoder, moment: moment_timezone_1.default };
     const vm = new VM({
         timeout: 25000,
         sandbox: {
@@ -50,7 +51,7 @@ const handler = async (event) => {
             .replace("export const handler = async (event) => {", '') // Remove handler definition line
             .replace("};", ''); // Remove only the last closing `};`
         const wrappedCode = `  
-    const { Redis, Resend, crypto, encoder, decoder } = imports;
+    const { Redis, Resend, crypto, encoder, decoder, moment } = imports;
 
     (async () => {
       try {
