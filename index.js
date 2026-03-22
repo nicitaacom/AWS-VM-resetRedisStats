@@ -10,18 +10,20 @@ const ioredis_1 = require("ioredis");
 const resend_1 = require("resend");
 const crypto_1 = __importDefault(require("crypto"));
 const moment_timezone_1 = __importDefault(require("moment-timezone"));
+const NEXT_PUBLIC_PRODUCTION_URL = "https://www.outreach-tool.com/";
+const NEXT_PUBLIC_PRODUCTION_AUTH_URL = "https://auth.outreach-tool.com/";
 const handler = async (event) => {
-    if (!process.env.NEXT_PUBLIC_PRODUCTION_URL || !process.env.NEXT_PUBLIC_PRODUCTION_AUTH_URL) {
+    if (!NEXT_PUBLIC_PRODUCTION_URL || !NEXT_PUBLIC_PRODUCTION_AUTH_URL) {
         return {
             statusCode: 400,
             error: 'NEXT_PUBLIC_PRODUCTION_URL or NEXT_PUBLIC_PRODUCTION_AUTH_URL missing',
         };
     }
-    const response = await fetch(`${process.env.NEXT_PUBLIC_PRODUCTION_AUTH_URL}api/lambda/VM-resetRedisStats`, {
+    const response = await fetch(`${NEXT_PUBLIC_PRODUCTION_AUTH_URL}api/lambda/VM-resetRedisStats`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            "X-Forwarded-For": process.env.NEXT_PUBLIC_PRODUCTION_URL, // Non-null assertion, validated above
+            "X-Forwarded-For": NEXT_PUBLIC_PRODUCTION_URL, // Non-null assertion, validated above
         },
         cache: "no-cache", // Should be no cache to improve security
     });
@@ -59,7 +61,7 @@ const handler = async (event) => {
           ${transformedCode} 
         })();
 
-        if (result?.statusCode !== 200) {
+        if (result?.statusCode !== 200 {
           throw new Error(result.body);
         }
 
