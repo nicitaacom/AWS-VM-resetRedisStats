@@ -89,7 +89,7 @@ try {
           ${transformedCode} 
         })();
 
-        if (result?.statusCode !== 200 {
+        if (result?.statusCode !== 200) {
           throw new Error(result.body);
         }
 
