@@ -3,10 +3,16 @@ const { VM } = VMModule;
 
 
 import { Redis } from "ioredis";
-import { Resend } from 'resend' 
-import crypto from 'crypto'
 import moment from "moment-timezone"
 
+// Node related
+import { Buffer } from "buffer"
+import { URLSearchParams } from "url"
+
+
+// For freeEmailDomains - so I fetch from entiryRedis envs by correct userId (if sent from gmail cuz user.email domain might be ukr.net not only gmail.com)
+import { readFileSync } from "fs"
+import path from "path"
 
 
 const NEXT_PUBLIC_PRODUCTION_URL = "https://www.outreach-tool.com/"
@@ -52,10 +58,17 @@ if (!response.ok) {
 
 const responseData = await response.json();
 
-const encoder = new TextEncoder()
-const decoder = new TextDecoder()
 
-  const imports = {Redis,Resend,crypto,encoder,decoder,moment}
+  // 📁 Works because CommonJS has __dirname by default
+  const filePath = path.join(__dirname, "freeEmailList.txt")
+
+  const freeEmailDomains = readFileSync(filePath, "utf-8")
+    .split("\n")
+    .map(domain => domain.trim().toLowerCase())
+    .filter(Boolean) // remove empty lines
+
+
+const imports = { Redis, moment, freeEmailDomains }
   
 const vm = new VM({
   timeout: 25000, // 25 seconds to prevent Lambda timeout
@@ -63,7 +76,12 @@ const vm = new VM({
     process: {
       env: { ...process.env },
     },
+    // Node related
+    setTimeout,
+    Buffer, // required for twilio Authorization token
+    URLSearchParams,
     fetch, // Pass fetch to the sandbox
+
     event, // Pass the event to the VM sandbox
     imports
   },
@@ -75,29 +93,19 @@ try {
   const transformedCode = responseData.code
   // Remove the export handler function line, adjusting to potentially varying spaces
   .replace("export const handler = async (event) => {", '') // Remove handler definition line
-  .replace("};", ''); // Remove only the last closing `};`
-
+  .replace(/\};\s*$/, '') // 2. remove only the LAST `};` at end of string
 
 
 
   const wrappedCode = `  
-    const { Redis, Resend, crypto, encoder, decoder, moment } = imports;
+    const { Redis, moment, freeEmailDomains} = imports;
 
-    (async () => {
-      try {
-        const result = await (async () => { 
-          ${transformedCode} 
-        })();
-
-        if (result?.statusCode !== 200) {
-          throw new Error(result.body);
-        }
-
-        return result;
-      } catch (error) {
-        return { statusCode: 400, body: error.message };
-      }
-    })();
+   (async () => {
+          const response = await (async () => { 
+            ${transformedCode} 
+          })();
+          return response
+      })();
   `;
       
   
@@ -106,7 +114,8 @@ try {
   const result = await vm.run(wrappedCode);
 
   if (result?.statusCode !== 200) {
-    const cleanedError = result.body.replace(/\\n/g, "\n").replace(/\\/g, '').replace(/\\/g, '')
+    const cleanedError = (typeof result?.body === 'string' ? result.body : JSON.stringify(result ?? 'undefined result'))
+      .replace(/\\n/g, "\n").replace(/\\/g, '')
     throw new Error(cleanedError);
   }
 

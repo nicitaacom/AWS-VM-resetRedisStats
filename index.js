@@ -7,9 +7,13 @@ exports.handler = void 0;
 const vm2_1 = __importDefault(require("vm2"));
 const { VM } = vm2_1.default;
 const ioredis_1 = require("ioredis");
-const resend_1 = require("resend");
-const crypto_1 = __importDefault(require("crypto"));
 const moment_timezone_1 = __importDefault(require("moment-timezone"));
+// Node related
+const buffer_1 = require("buffer");
+const url_1 = require("url");
+// For freeEmailDomains - so I fetch from entiryRedis envs by correct userId (if sent from gmail cuz user.email domain might be ukr.net not only gmail.com)
+const fs_1 = require("fs");
+const path_1 = __importDefault(require("path"));
 const NEXT_PUBLIC_PRODUCTION_URL = "https://www.outreach-tool.com/";
 const NEXT_PUBLIC_PRODUCTION_AUTH_URL = "https://auth.outreach-tool.com/";
 const handler = async (event) => {
@@ -32,15 +36,24 @@ const handler = async (event) => {
         throw new Error(`Error ${response.status}: ${errorMessage || "Unknown error"}`);
     }
     const responseData = await response.json();
-    const encoder = new TextEncoder();
-    const decoder = new TextDecoder();
-    const imports = { Redis: ioredis_1.Redis, Resend: resend_1.Resend, crypto: crypto_1.default, encoder, decoder, moment: moment_timezone_1.default };
+    // 📁 Works because CommonJS has __dirname by default
+    const filePath = path_1.default.join(__dirname, "freeEmailList.txt");
+    const freeEmailDomains = (0, fs_1.readFileSync)(filePath, "utf-8")
+        .split("\n")
+        .map(domain => domain.trim().toLowerCase())
+        .filter(Boolean); // remove empty lines
+    const imports = { Redis: ioredis_1.Redis, moment: moment_timezone_1.default, freeEmailDomains };
     const vm = new VM({
         timeout: 25000,
         sandbox: {
             process: {
                 env: { ...process.env },
             },
+            // Node related
+            setTimeout,
+            Buffer: buffer_1.Buffer,
+            URLSearchParams: // required for twilio Authorization token
+            url_1.URLSearchParams,
             fetch,
             event,
             imports
@@ -51,30 +64,22 @@ const handler = async (event) => {
         const transformedCode = responseData.code
             // Remove the export handler function line, adjusting to potentially varying spaces
             .replace("export const handler = async (event) => {", '') // Remove handler definition line
-            .replace("};", ''); // Remove only the last closing `};`
+            .replace(/\};\s*$/, ''); // 2. remove only the LAST `};` at end of string
         const wrappedCode = `  
-    const { Redis, Resend, crypto, encoder, decoder, moment } = imports;
+    const { Redis, moment, freeEmailDomains} = imports;
 
-    (async () => {
-      try {
-        const result = await (async () => { 
-          ${transformedCode} 
-        })();
-
-        if (result?.statusCode !== 200) {
-          throw new Error(result.body);
-        }
-
-        return result;
-      } catch (error) {
-        return { statusCode: 400, body: error.message };
-      }
-    })();
+   (async () => {
+          const response = await (async () => { 
+            ${transformedCode} 
+          })();
+          return response
+      })();
   `;
         // Execute the wrapped code in the VM
         const result = await vm.run(wrappedCode);
         if (result?.statusCode !== 200) {
-            const cleanedError = result.body.replace(/\\n/g, "\n").replace(/\\/g, '').replace(/\\/g, '');
+            const cleanedError = (typeof result?.body === 'string' ? result.body : JSON.stringify(result ?? 'undefined result'))
+                .replace(/\\n/g, "\n").replace(/\\/g, '');
             throw new Error(cleanedError);
         }
         return {
