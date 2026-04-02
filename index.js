@@ -11,9 +11,6 @@ const moment_timezone_1 = __importDefault(require("moment-timezone"));
 // Node related
 const buffer_1 = require("buffer");
 const url_1 = require("url");
-// For freeEmailDomains - so I fetch from entiryRedis envs by correct userId (if sent from gmail cuz user.email domain might be ukr.net not only gmail.com)
-const fs_1 = require("fs");
-const path_1 = __importDefault(require("path"));
 const NEXT_PUBLIC_PRODUCTION_URL = "https://www.outreach-tool.com/";
 const NEXT_PUBLIC_PRODUCTION_AUTH_URL = "https://auth.outreach-tool.com/";
 const handler = async (event) => {
@@ -36,13 +33,7 @@ const handler = async (event) => {
         throw new Error(`Error ${response.status}: ${errorMessage || "Unknown error"}`);
     }
     const responseData = await response.json();
-    // 📁 Works because CommonJS has __dirname by default
-    const filePath = path_1.default.join(__dirname, "freeEmailList.txt");
-    const freeEmailDomains = (0, fs_1.readFileSync)(filePath, "utf-8")
-        .split("\n")
-        .map(domain => domain.trim().toLowerCase())
-        .filter(Boolean); // remove empty lines
-    const imports = { Redis: ioredis_1.Redis, moment: moment_timezone_1.default, freeEmailDomains };
+    const imports = { Redis: ioredis_1.Redis, moment: moment_timezone_1.default };
     const vm = new VM({
         timeout: 25000,
         sandbox: {
@@ -66,7 +57,7 @@ const handler = async (event) => {
             .replace("export const handler = async (event) => {", '') // Remove handler definition line
             .replace(/\};\s*$/, ''); // 2. remove only the LAST `};` at end of string
         const wrappedCode = `  
-    const { Redis, moment, freeEmailDomains} = imports;
+    const { Redis, moment } = imports;
 
    (async () => {
           const response = await (async () => { 

@@ -59,16 +59,8 @@ if (!response.ok) {
 const responseData = await response.json();
 
 
-  // 📁 Works because CommonJS has __dirname by default
-  const filePath = path.join(__dirname, "freeEmailList.txt")
 
-  const freeEmailDomains = readFileSync(filePath, "utf-8")
-    .split("\n")
-    .map(domain => domain.trim().toLowerCase())
-    .filter(Boolean) // remove empty lines
-
-
-const imports = { Redis, moment, freeEmailDomains }
+const imports = { Redis, moment }
   
 const vm = new VM({
   timeout: 25000, // 25 seconds to prevent Lambda timeout
@@ -98,7 +90,7 @@ try {
 
 
   const wrappedCode = `  
-    const { Redis, moment, freeEmailDomains} = imports;
+    const { Redis, moment } = imports;
 
    (async () => {
           const response = await (async () => { 
